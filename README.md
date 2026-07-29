@@ -9,7 +9,7 @@ exposes it through a REST API, and provides a React UI for CRUD operations.
 ## Stack
 
 - **Backend:** FastAPI + SQLAlchemy + PostgreSQL
-- **Frontend:** React (Vite)
+- **Frontend:** React (Vite) + Tailwind CSS
 - **Tests:** pytest (backend), Vitest + React Testing Library (frontend)
 - **Infra:** Docker Compose (postgres + backend + frontend)
 
