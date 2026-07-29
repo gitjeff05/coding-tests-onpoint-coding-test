@@ -15,11 +15,64 @@ exposes it through a REST API, and provides a React UI for CRUD operations.
 
 ## Schema
 
-The hierarchy (Location > Department > Category > SubCategory) is modeled as
-a single self-referencing `hierarchy_nodes` table (`id, parent_id, level,
-name`) rather than four separate tables. It's a strict 4-level tree, so an
-adjacency list keeps every level on the same CRUD surface instead of
-duplicating it four times.
+The hierarchy (Location > Department > Category > SubCategory) is modeled
+as a single self-referencing table, `hierarchy_nodes`, rather than four
+separate tables (`locations`, `departments`, `categories`,
+`subcategories`):
+
+| Column      | Type                                | Notes                                      |
+|-------------|-------------------------------------|---------------------------------------------|
+| `id`        | integer, primary key                |                                             |
+| `parent_id` | integer, FK to `hierarchy_nodes.id`, nullable | `NULL` only for `location` rows (the roots) |
+| `level`     | enum: `location`/`department`/`category`/`subcategory` | which tier of the hierarchy this row represents |
+| `name`      | string                              | e.g. "Bakery", "Cheese Sauce"               |
+
+This is the **adjacency list** pattern: every row is a node, and a row
+points at its parent via `parent_id` instead of living in a
+level-specific table with a level-specific foreign key
+(`departments.location_id`, `categories.department_id`, etc.).
+
+**Why this instead of four tables.** The source data is a strict,
+fixed-depth 4-level tree — every subcategory always has exactly one
+category parent, every category exactly one department parent, and so on.
+Four separate tables would model that same tree, but every level would
+need its own table, its own set of Pydantic schemas, its own CRUD
+functions, and its own REST routes — four near-identical copies of the
+same create/read/update/delete logic. Collapsing all four levels into one
+table means one model, one schema, one `crud.py`, and one set of
+`/api/nodes` routes handle every level; the UI's recursive tree component
+follows the same shape. The tradeoff is that the database itself can't
+enforce "a department's parent must be a location" the way a real foreign
+key to a `locations` table would — that constraint is enforced in
+application code instead (see below), not by the schema.
+
+**Enforcing hierarchy order.** Because any node can technically point to
+any other node as its parent, `backend/app/crud.py` keeps a small
+`LEVEL_PARENT` map (`department -> location`, `category -> department`,
+`subcategory -> category`, `location -> None`) and calls
+`validate_parent()` on every create/update. It checks that a `location`
+has no parent, and that every other level's `parent_id` points at an
+existing node whose `level` is exactly the expected one — e.g. you can't
+attach a `category` directly under a `location`, or under another
+`category`. A violation raises a `ValueError`, which the API layer turns
+into a `400` (see the CRUD API table below).
+
+**Cascading delete.** The SQLAlchemy relationship on `HierarchyNode` is
+declared with `cascade="all, delete-orphan"`, so deleting a node (say, a
+`department`) deletes its entire subtree (`category` and `subcategory`
+rows underneath it) in the same operation — you don't have to walk the
+tree and delete leaf-first yourself.
+
+**Uniqueness.** A `UniqueConstraint` on `(parent_id, name)` stops two
+siblings under the same parent from having the same name (e.g. two
+"Cheese" categories under the same "Dairy" department), while still
+allowing the same name to reappear elsewhere in the tree as long as the
+parent differs. The seed data actually relies on this: under Floral,
+there's a category named "Gifts" (child of the "Floral" department) and a
+subcategory also named "Gifts" (child of that category) — same string,
+different `parent_id`, so both rows are allowed. The same pattern shows up
+for "Plants", "Kitchen Accessories", "Stuffing Products", and a few
+others.
 
 ## Quick start (build + deploy)
 
