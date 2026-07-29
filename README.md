@@ -21,6 +21,35 @@ name`) rather than four separate tables. It's a strict 4-level tree, so an
 adjacency list keeps every level on the same CRUD surface instead of
 duplicating it four times.
 
+## Quick start (build + deploy)
+
+The whole stack (Postgres, backend, frontend) builds and deploys from a
+clean checkout with one script — only Docker is required:
+
+```
+./scripts/setup.sh
+```
+
+This builds the images, starts Postgres, seeds it, and brings up the
+backend and frontend. When it's done:
+
+- Frontend: http://localhost:3000
+- API: http://localhost:8000 (docs at `/docs`)
+
+Run the full test suite (also Docker-only, no local Python/Node needed):
+
+```
+./scripts/test.sh
+```
+
+Tear everything down with `docker compose down` (add `-v` to also wipe the
+Postgres volume).
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `master`: backend tests
+via pytest, and frontend type-check + Vitest + production build.
+
 ## Running the database
 
 ```

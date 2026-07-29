@@ -27,5 +27,12 @@ services:
     volumes:
       - ./backend:/app
 
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
 volumes:
   db_data:
