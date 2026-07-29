@@ -53,6 +53,19 @@ Creates/updates validate that a node's `level` matches its parent's expected
 level (e.g. a `department` must have a `location` parent) and return `400`
 otherwise.
 
+## Running the frontend
+
+```
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. The UI renders the full hierarchy tree from
+`GET /api/tree` and lets you add a child at any level, rename a node, or
+delete a node (and its descendants), all through the REST API above. Set
+`VITE_API_BASE` if the backend isn't at `http://localhost:8000`.
+
 ## Status
 
 This is being built incrementally, exercise by exercise. See commit history
