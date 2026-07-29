@@ -5,9 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
-from .database import Base, engine, get_db
-
-Base.metadata.create_all(bind=engine)
+from .database import get_db
 
 app = FastAPI(title="SKU Hierarchy API")
 
