@@ -8,12 +8,16 @@ export const LEVEL_BADGE: Record<Level, string> = {
 };
 
 const btn = "rounded-md border px-2 py-1 text-xs font-medium transition-colors";
+const iconBtn =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors";
 
 export const button = {
   primary: `${btn} border-blue-600 bg-blue-600 text-white hover:bg-blue-700`,
   neutral: `${btn} border-slate-300 text-slate-600 hover:bg-slate-100`,
   add: `${btn} border-blue-300 text-blue-600 hover:bg-blue-50`,
   danger: `${btn} border-red-300 text-red-600 hover:bg-red-50`,
+  iconNeutral: `${iconBtn} border-slate-300 text-slate-500 hover:bg-slate-100`,
+  iconDanger: `${iconBtn} border-red-300 text-red-500 hover:bg-red-50`,
 };
 
 export const input =

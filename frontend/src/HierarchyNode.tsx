@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createNode, deleteNode, updateNode } from "./api";
 import { CHILD_LEVEL, type TreeNode } from "./types";
@@ -82,17 +83,27 @@ export default function HierarchyNode({ node, onChange }: Props) {
         ) : (
           <>
             <span className="flex-1 text-sm text-slate-800">{node.name}</span>
-            <div className="flex gap-1.5">
-              <button className={button.neutral} onClick={() => setEditing(true)}>
-                Edit
-              </button>
+            <div className="flex items-center gap-1.5">
               {childLevel && (
                 <button className={button.add} onClick={() => setAdding((v) => !v)}>
                   + {childLevel}
                 </button>
               )}
-              <button className={button.danger} onClick={remove}>
-                Delete
+              <button
+                className={button.iconNeutral}
+                onClick={() => setEditing(true)}
+                aria-label={`Edit ${node.name}`}
+                title="Edit"
+              >
+                <Pencil size={14} />
+              </button>
+              <button
+                className={button.iconDanger}
+                onClick={remove}
+                aria-label={`Delete ${node.name}`}
+                title="Delete"
+              >
+                <Trash2 size={14} />
               </button>
             </div>
           </>
