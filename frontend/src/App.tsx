@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { createNode, getTree } from "./api";
+import { createNode, getTree, UnauthorizedError } from "./api";
+import { clearToken, getToken } from "./auth";
 import HierarchyNode from "./HierarchyNode";
+import LoginForm from "./LoginForm";
 import type { TreeNode } from "./types";
 import { button, input } from "./ui";
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(() => !!getToken());
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [newLocation, setNewLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +18,11 @@ export default function App() {
       setTree(await getTree());
       setError(null);
     } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        clearToken();
+        setLoggedIn(false);
+        return;
+      }
       setError((e as Error).message);
     } finally {
       setLoading(false);
@@ -22,8 +30,13 @@ export default function App() {
   }
 
   useEffect(() => {
-    reload();
-  }, []);
+    if (loggedIn) reload();
+  }, [loggedIn]);
+
+  function logout() {
+    clearToken();
+    setLoggedIn(false);
+  }
 
   async function addLocation() {
     if (!newLocation.trim()) return;
@@ -36,14 +49,23 @@ export default function App() {
     }
   }
 
+  if (!loggedIn) {
+    return <LoginForm onLoggedIn={() => setLoggedIn(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto max-w-4xl px-6 py-10">
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">SKU Hierarchy</h1>
-          <p className="text-sm text-slate-500">
-            Location &gt; Department &gt; Category &gt; SubCategory
-          </p>
+        <header className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">SKU Hierarchy</h1>
+            <p className="text-sm text-slate-500">
+              Location &gt; Department &gt; Category &gt; SubCategory
+            </p>
+          </div>
+          <button className={button.neutral} onClick={logout}>
+            Log out
+          </button>
         </header>
 
         <div className="mb-6 flex items-center gap-2">

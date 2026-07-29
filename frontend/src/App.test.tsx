@@ -2,11 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import * as api from "./api";
+import * as auth from "./auth";
 import type { TreeNode } from "./types";
 
 vi.mock("./api");
+vi.mock("./auth");
 
 const mockedApi = vi.mocked(api);
+const mockedAuth = vi.mocked(auth);
 
 const sampleTree: TreeNode[] = [
   {
@@ -28,6 +31,7 @@ const sampleTree: TreeNode[] = [
 
 beforeEach(() => {
   mockedApi.getTree.mockResolvedValue(sampleTree);
+  mockedAuth.getToken.mockReturnValue("fake-token");
 });
 
 describe("App", () => {

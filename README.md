@@ -6,6 +6,30 @@ Solution to the Full Stack Software Engineer (React + Python) coding test
 Models the Location > Department > Category > SubCategory SKU hierarchy,
 exposes it through a REST API, and provides a React UI for CRUD operations.
 
+## Quick start (build + deploy)
+
+The whole stack (Postgres, backend, frontend) builds and deploys from a
+clean checkout with one script — only Docker is required:
+
+```
+./scripts/setup.sh
+```
+
+This builds the images, starts Postgres, seeds it, and brings up the
+backend and frontend. When it's done:
+
+- Frontend: http://localhost:3000
+- API: http://localhost:8000 (docs at `/docs`)
+
+Run the full test suite (also Docker-only, no local Python/Node needed):
+
+```
+./scripts/test.sh
+```
+
+Tear everything down with `docker compose down` (add `-v` to also wipe the
+Postgres volume).
+
 ## Stack
 
 - **Backend:** FastAPI + SQLAlchemy + PostgreSQL
@@ -74,30 +98,6 @@ different `parent_id`, so both rows are allowed. The same pattern shows up
 for "Plants", "Kitchen Accessories", "Stuffing Products", and a few
 others.
 
-## Quick start (build + deploy)
-
-The whole stack (Postgres, backend, frontend) builds and deploys from a
-clean checkout with one script — only Docker is required:
-
-```
-./scripts/setup.sh
-```
-
-This builds the images, starts Postgres, seeds it, and brings up the
-backend and frontend. When it's done:
-
-- Frontend: http://localhost:3000
-- API: http://localhost:8000 (docs at `/docs`)
-
-Run the full test suite (also Docker-only, no local Python/Node needed):
-
-```
-./scripts/test.sh
-```
-
-Tear everything down with `docker compose down` (add `-v` to also wipe the
-Postgres volume).
-
 ## CI
 
 `.github/workflows/ci.yml` runs on every push to `master`: backend tests
@@ -135,6 +135,9 @@ Creates/updates validate that a node's `level` matches its parent's expected
 level (e.g. a `department` must have a `location` parent) and return `400`
 otherwise.
 
+Every route above requires authentication — see "Authentication" below.
+`/auth/login` and `/docs` do not.
+
 ## Running the frontend
 
 ```
@@ -143,10 +146,12 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. The UI renders the full hierarchy tree from
-`GET /api/tree` and lets you add a child at any level, rename a node, or
-delete a node (and its descendants), all through the REST API above. Set
-`VITE_API_BASE` if the backend isn't at `http://localhost:8000`.
+Open http://localhost:5173. Log in with `admin` / `admin123` (see
+"Authentication" below) — the UI then renders the full hierarchy tree
+from `GET /api/tree` and lets you add a child at any level, rename a
+node, or delete a node (and its descendants), all through the REST API
+above. Set `VITE_API_BASE` if the backend isn't at
+`http://localhost:8000`.
 
 ## Running tests
 
@@ -174,6 +179,69 @@ The backend logs to stdout (`app.logging_config.configure_logging`, format
   nodes.
 
 View it with `docker compose logs -f backend`.
+
+## Authentication
+
+All `/api/*` routes require authentication. Two schemes are accepted on
+the same `Authorization` header, checked by one dependency
+(`backend/app/auth.py:require_auth`):
+
+- **HTTP Basic** — for direct/script access (curl, Postman, etc). Demo
+  credentials default to `admin` / `admin123`, overridable via the
+  `AUTH_USERNAME` / `AUTH_PASSWORD` env vars (also set in
+  `docker-compose.yml`).
+- **Bearer JWT** — what the frontend actually uses. `POST /auth/login`
+  with `{"username", "password"}` checks the same demo credentials and
+  returns a self-issued, HS256-signed JWT (`{"sub": username, "exp": ...}`,
+  30-minute expiry, signed with the `JWT_SECRET` env var). The UI sends
+  that token back as `Authorization: Bearer <token>` on every subsequent
+  call.
+
+```
+curl -u admin:admin123 http://localhost:8000/api/tree
+
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+# => {"access_token": "...", "token_type": "bearer"}
+curl -H "Authorization: Bearer <access_token>" http://localhost:8000/api/tree
+```
+
+The UI (`frontend/src/LoginForm.tsx`) is a plain username/password form —
+not the browser's native Basic Auth popup. On success it stores the JWT
+in `sessionStorage` (survives a page refresh, cleared when the tab
+closes — a reasonable middle ground given the token already expires in
+30 minutes; a production app would prefer an httpOnly cookie to avoid
+exposing the token to XSS at all) and attaches it to every API call;
+"Log out" clears it. If a call comes back `401` (token expired or
+invalid) while loading/reloading the tree, the app clears the token and
+drops back to the login screen automatically. A `401` returned from an
+in-place edit/delete on a single node (open just long enough for the
+token to expire mid-session) is a known exception — that surfaces as an
+inline error on the node instead of a global redirect; logging out and
+back in resolves it.
+
+`/auth/login`, `/docs`, and `/openapi.json` do not require auth, and
+neither will the `/health` endpoint (unauthenticated health checks are
+the norm — a monitoring tool polling the app shouldn't need credentials).
+
+**What this is, and isn't.** This demonstrates the *mechanics* of
+JWT/OAuth2-style bearer tokens — issuing, signing, verifying, expiring —
+without standing up a real identity provider. It is **not** how you'd
+actually do authentication in production. A real deployment would
+delegate identity entirely to a managed IdP — **AWS Cognito, Auth0,
+Okta, or an enterprise SSO/OIDC provider** — via the **OAuth2
+Authorization Code flow** (with **PKCE** for a browser SPA like this
+one), with **OpenID Connect** supplying the identity layer (`id_token`,
+`/userinfo`) on top of OAuth2's authorization framework. The app would
+never see or store a password: it would redirect to the IdP's hosted
+login page, receive a code back, exchange it for tokens, and verify
+incoming JWTs by fetching the provider's **JWKS** (public signing keys,
+rotated by the provider) and checking signature/issuer/audience/expiry —
+rather than trusting a single static HMAC secret shared between issuer
+and verifier the way this demo does. That approach also gets you
+password resets, MFA, social login, and centralized user management for
+free, none of which are in scope here.
 
 ## Status
 
