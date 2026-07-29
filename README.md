@@ -66,6 +66,21 @@ Open http://localhost:5173. The UI renders the full hierarchy tree from
 delete a node (and its descendants), all through the REST API above. Set
 `VITE_API_BASE` if the backend isn't at `http://localhost:8000`.
 
+## Running tests
+
+Backend (pytest, against an isolated in-memory SQLite DB, no Postgres needed):
+
+```
+docker compose run --rm backend python -m pytest -v
+```
+
+Frontend (Vitest + React Testing Library, API calls mocked):
+
+```
+cd frontend
+npm test
+```
+
 ## Status
 
 This is being built incrementally, exercise by exercise. See commit history
