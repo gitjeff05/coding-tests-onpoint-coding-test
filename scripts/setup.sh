@@ -18,15 +18,18 @@ done
 echo "==> Seeding database"
 docker compose run --rm backend python -m app.seed
 
-echo "==> Starting backend + frontend"
-docker compose up -d backend frontend
+echo "==> Starting backend + frontend + monitoring"
+docker compose up -d backend frontend prometheus grafana
 
 cat <<EOF
 
 Stack is up:
-  Frontend: http://localhost:3000
-  API:      http://localhost:8000
-  API docs: http://localhost:8000/docs
+  Frontend:   http://localhost:3000
+  API:        http://localhost:8000
+  API docs:   http://localhost:8000/docs
+  Health:     http://localhost:8000/health
+  Prometheus: http://localhost:9090
+  Grafana:    http://localhost:3001 (dashboard viewable anonymously; admin/admin to edit)
 
 Tear down with: docker compose down
 EOF

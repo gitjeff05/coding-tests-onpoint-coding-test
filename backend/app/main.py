@@ -4,6 +4,9 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
@@ -38,6 +41,21 @@ async def log_requests(request: Request, call_next):
         duration_ms,
     )
     return response
+
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+
+@app.get("/health")
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        logger.exception("health check: database connectivity failed")
+        db_ok = False
+    body = {"status": "ok" if db_ok else "unhealthy", "db": db_ok}
+    return JSONResponse(status_code=200 if db_ok else 503, content=body)
 
 
 app.include_router(auth_router)
