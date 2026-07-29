@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # how a managed identity provider replaces this.
 AUTH_USERNAME = os.environ.get("AUTH_USERNAME", "admin")
 AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "admin123")
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me")
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-me-32-bytes-min")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 30
 

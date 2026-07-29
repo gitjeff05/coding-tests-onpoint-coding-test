@@ -24,7 +24,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://sku:sku@db:5432/sku_hierarchy
       AUTH_USERNAME: admin
       AUTH_PASSWORD: admin123
-      JWT_SECRET: dev-secret-change-me
+      JWT_SECRET: dev-secret-change-me-32-bytes-min
     ports:
       - "8000:8000"
     volumes:
