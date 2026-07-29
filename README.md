@@ -32,6 +32,27 @@ docker compose run --rm backend python -m app.seed
 This starts Postgres, builds the backend image, and loads
 `backend/data/sku_hierarchy.csv` into `hierarchy_nodes`.
 
+## Running the API
+
+```
+docker compose up -d db backend
+```
+
+API docs (Swagger UI) at http://localhost:8000/docs.
+
+| Method | Path              | Description                                  |
+|--------|-------------------|-----------------------------------------------|
+| GET    | /api/nodes        | List nodes, optional `level`/`parent_id` filters |
+| GET    | /api/tree         | Full nested tree from the root locations down |
+| GET    | /api/nodes/{id}   | Get one node                                  |
+| POST   | /api/nodes        | Create a node (`level`, `name`, `parent_id`)  |
+| PUT    | /api/nodes/{id}   | Update a node's `name`/`parent_id`            |
+| DELETE | /api/nodes/{id}   | Delete a node (cascades to descendants)       |
+
+Creates/updates validate that a node's `level` matches its parent's expected
+level (e.g. a `department` must have a `location` parent) and return `400`
+otherwise.
+
 ## Status
 
 This is being built incrementally, exercise by exercise. See commit history
