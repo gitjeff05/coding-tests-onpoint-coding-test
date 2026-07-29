@@ -1,6 +1,10 @@
+import logging
+
 from sqlalchemy.orm import Session
 
 from . import models, schemas
+
+logger = logging.getLogger(__name__)
 
 LEVEL_PARENT = {
     models.Level.location: None,
@@ -10,24 +14,27 @@ LEVEL_PARENT = {
 }
 
 
+def _reject(message: str):
+    logger.warning("rejected write: %s", message)
+    raise ValueError(message)
+
+
 def validate_parent(db: Session, level: models.Level, parent_id):
     expected_parent_level = LEVEL_PARENT[level]
 
     if expected_parent_level is None:
         if parent_id is not None:
-            raise ValueError(f"{level.value} nodes cannot have a parent")
+            _reject(f"{level.value} nodes cannot have a parent")
         return
 
     if parent_id is None:
-        raise ValueError(
-            f"{level.value} nodes require a parent of level {expected_parent_level.value}"
-        )
+        _reject(f"{level.value} nodes require a parent of level {expected_parent_level.value}")
 
     parent = db.get(models.HierarchyNode, parent_id)
     if parent is None:
-        raise ValueError(f"parent {parent_id} not found")
+        _reject(f"parent {parent_id} not found")
     if parent.level != expected_parent_level:
-        raise ValueError(
+        _reject(
             f"{level.value} nodes require a parent of level "
             f"{expected_parent_level.value}, got {parent.level.value}"
         )
@@ -61,12 +68,14 @@ def create_node(db: Session, node: schemas.NodeCreate):
     db.add(db_node)
     db.commit()
     db.refresh(db_node)
+    logger.info("created %s %r (id=%s, parent_id=%s)", db_node.level.value, db_node.name, db_node.id, db_node.parent_id)
     return db_node
 
 
 def update_node(db: Session, node_id: int, update: schemas.NodeUpdate):
     db_node = get_node(db, node_id)
     if db_node is None:
+        logger.warning("update failed: node %s not found", node_id)
         return None
 
     data = update.model_dump(exclude_unset=True)
@@ -78,13 +87,16 @@ def update_node(db: Session, node_id: int, update: schemas.NodeUpdate):
 
     db.commit()
     db.refresh(db_node)
+    logger.info("updated %s id=%s: %s", db_node.level.value, db_node.id, data)
     return db_node
 
 
 def delete_node(db: Session, node_id: int):
     db_node = get_node(db, node_id)
     if db_node is None:
+        logger.warning("delete failed: node %s not found", node_id)
         return False
+    logger.info("deleting %s %r (id=%s)", db_node.level.value, db_node.name, db_node.id)
     db.delete(db_node)
     db.commit()
     return True

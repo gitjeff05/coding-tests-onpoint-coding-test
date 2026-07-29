@@ -110,6 +110,18 @@ cd frontend
 npm test
 ```
 
+## Logging
+
+The backend logs to stdout (`app.logging_config.configure_logging`, format
+`timestamp level logger message`):
+
+- `app.main`: one line per request — method, path, status code, duration.
+- `app.crud`: one line per mutation (create/update/delete) and a `WARNING`
+  for rejected writes (e.g. wrong parent level) or operations on missing
+  nodes.
+
+View it with `docker compose logs -f backend`.
+
 ## Status
 
 This is being built incrementally, exercise by exercise. See commit history
