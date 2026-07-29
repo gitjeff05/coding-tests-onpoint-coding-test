@@ -22,6 +22,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg2://sku:sku@db:5432/sku_hierarchy
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: admin123
+      JWT_SECRET: dev-secret-change-me
     ports:
       - "8000:8000"
     volumes:

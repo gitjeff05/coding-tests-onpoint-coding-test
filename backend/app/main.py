@@ -2,11 +2,13 @@ import logging
 import time
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
+from .auth import require_auth
+from .auth import router as auth_router
 from .database import get_db
 from .logging_config import configure_logging
 
@@ -38,7 +40,12 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.get("/api/nodes", response_model=List[schemas.Node])
+app.include_router(auth_router)
+
+api_router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
+
+
+@api_router.get("/nodes", response_model=List[schemas.Node])
 def list_nodes(
     level: Optional[models.Level] = None,
     parent_id: Optional[int] = None,
@@ -47,12 +54,12 @@ def list_nodes(
     return crud.list_nodes(db, level=level, parent_id=parent_id)
 
 
-@app.get("/api/tree", response_model=List[schemas.NodeTree])
+@api_router.get("/tree", response_model=List[schemas.NodeTree])
 def get_tree(db: Session = Depends(get_db)):
     return crud.get_roots(db)
 
 
-@app.get("/api/nodes/{node_id}", response_model=schemas.Node)
+@api_router.get("/nodes/{node_id}", response_model=schemas.Node)
 def get_node(node_id: int, db: Session = Depends(get_db)):
     node = crud.get_node(db, node_id)
     if node is None:
@@ -60,7 +67,7 @@ def get_node(node_id: int, db: Session = Depends(get_db)):
     return node
 
 
-@app.post("/api/nodes", response_model=schemas.Node, status_code=201)
+@api_router.post("/nodes", response_model=schemas.Node, status_code=201)
 def create_node(node: schemas.NodeCreate, db: Session = Depends(get_db)):
     try:
         return crud.create_node(db, node)
@@ -68,7 +75,7 @@ def create_node(node: schemas.NodeCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.put("/api/nodes/{node_id}", response_model=schemas.Node)
+@api_router.put("/nodes/{node_id}", response_model=schemas.Node)
 def update_node(node_id: int, update: schemas.NodeUpdate, db: Session = Depends(get_db)):
     try:
         node = crud.update_node(db, node_id, update)
@@ -79,7 +86,10 @@ def update_node(node_id: int, update: schemas.NodeUpdate, db: Session = Depends(
     return node
 
 
-@app.delete("/api/nodes/{node_id}", status_code=204)
+@api_router.delete("/nodes/{node_id}", status_code=204)
 def delete_node(node_id: int, db: Session = Depends(get_db)):
     if not crud.delete_node(db, node_id):
         raise HTTPException(status_code=404, detail="node not found")
+
+
+app.include_router(api_router)

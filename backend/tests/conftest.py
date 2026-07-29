@@ -1,11 +1,16 @@
+import base64
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth import AUTH_PASSWORD, AUTH_USERNAME
 from app.database import Base, get_db
 from app.main import app
+
+BASIC_AUTH_HEADER = "Basic " + base64.b64encode(f"{AUTH_USERNAME}:{AUTH_PASSWORD}".encode()).decode()
 
 engine = create_engine(
     "sqlite:///:memory:",
@@ -35,4 +40,4 @@ def reset_db():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return TestClient(app, headers={"Authorization": BASIC_AUTH_HEADER})
