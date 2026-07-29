@@ -108,6 +108,12 @@ others.
 `.github/workflows/ci.yml` runs on every push to `master`: backend tests
 via pytest, and frontend type-check + Vitest + production build.
 
+## Production roadmap
+
+This is a local, Docker-based build for a coding exercise, not a deployed
+system. [`ROADMAP.md`](ROADMAP.md) is a short list of what would change
+before treating it as one.
+
 ## Running the database
 
 ```
